@@ -10,7 +10,7 @@ public sealed class KeyboardProfile
     public KeyboardProfile(string id, string name, string family, string support, bool experimental) {
         Id=id; Name=name; Family=family; Support=support; Experimental=experimental;
     }
-    public override string ToString() { return Name + (Experimental ? " (experimental)" : ""); }
+    public override string ToString() { return Name; }
 }
 
 public static class KeyboardProfiles
