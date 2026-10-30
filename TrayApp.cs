@@ -8,7 +8,7 @@ using System.Threading;
 using System.Windows.Forms;
 using Microsoft.Win32;
 
-// Independent workers keep a silent keyboard from blocking mouse updates.
+// Read the keyboard in the background so the tray stays responsive.
 sealed class BatteryDevice : IDisposable
 {
     public readonly string Name;
@@ -49,11 +49,10 @@ sealed class BatteryDevice : IDisposable
         if (reading.Percent.HasValue) {
             lastPercent = reading.Percent;
             Headline = reading.Percent + "%";
-            Detail = reading.Charging.HasValue ? (reading.Charging.Value ? "Charging" : "On battery") : reading.Message;
-            bool charging = reading.Charging == true;
-            SetIcon(reading.Percent.ToString(), charging ? Color.FromArgb(40,110,185) : reading.Percent <= 20 ? Color.FromArgb(190,60,35) : color);
-            if (reading.Percent > 25 || charging) notified = false;
-            if (reading.Percent <= 20 && !charging && !notified) {
+            Detail = "On battery";
+            SetIcon(reading.Percent.ToString(), reading.Percent <= 20 ? Color.FromArgb(190,60,35) : color);
+            if (reading.Percent > 25) notified = false;
+            if (reading.Percent <= 20 && !notified) {
                 Tray.ShowBalloonTip(6000, Name + " battery is low", reading.Percent + "% remaining. Connect it to power to charge.", ToolTipIcon.Warning);
                 notified = true;
             }
@@ -70,7 +69,7 @@ sealed class BatteryDevice : IDisposable
         }
         Status.Text = Headline + " - " + Detail;
         Updated.Text = lastSeen.HasValue ? "Last reading: " + lastSeen.Value.ToString("dd MMM HH:mm:ss") : "No battery reading yet";
-        TooltipStatus = Headline + (reading.Charging == true ? " (charging)" : "");
+        TooltipStatus = Headline;
         UpdateLabels();
         if (Changed != null) Changed();
     }
@@ -126,16 +125,10 @@ sealed class TrayApp : ApplicationContext
         return path == null ? new AulaBatteryProbe.Reading { Message = "Receiver disconnected" } : AulaBatteryProbe.Query(path);
     }
 
-    static AulaBatteryProbe.Reading QueryRazer() {
-        string path = Receiver.FindRazer();
-        return path == null ? new AulaBatteryProbe.Reading { Message = "Mouse receiver disconnected" } : RazerBatteryProbe.Query(path);
-    }
-
     public TrayApp()
     {
         devices = new[] {
-            new BatteryDevice("AULA F75", Color.FromArgb(25,125,90), QueryAula),
-            new BatteryDevice("Razer DeathAdder V4 Pro", Color.FromArgb(125,75,185), QueryRazer)
+            new BatteryDevice("AULA F75", Color.FromArgb(25,125,90), QueryAula)
         };
         foreach (var device in devices) {
             var current = device;
@@ -143,7 +136,7 @@ sealed class TrayApp : ApplicationContext
             menu.Items.Add(current.Name, null, delegate { ShowPopup(); });
             menu.Items.Add(current.Status); menu.Items.Add(current.Updated);
             menu.Items.Add(new ToolStripSeparator());
-            menu.Items.Add("Show both batteries", null, delegate { ShowPopup(); });
+            menu.Items.Add("Show battery details", null, delegate { ShowPopup(); });
             menu.Items.Add("Refresh now", null, delegate { Refresh(); });
             current.Startup.Click += delegate { ToggleStartup(); };
             menu.Items.Add(current.Startup);
@@ -165,9 +158,7 @@ sealed class TrayApp : ApplicationContext
 
     void UpdateTooltips()
     {
-        // Compact names keep both complete lines within NotifyIcon's 63-character limit,
-        // including the longest states: "100% (last seen)" and "100% (charging)".
-        string tip = "AULA F75: " + devices[0].TooltipStatus + "\nDeathAdder V4 Pro: " + devices[1].TooltipStatus;
+        string tip = "AULA F75: " + devices[0].TooltipStatus;
         foreach (var device in devices) device.Tray.Text = tip;
     }
 
@@ -202,7 +193,7 @@ sealed class TrayApp : ApplicationContext
     {
         if (popup != null && !popup.IsDisposed) { popup.Activate(); return; }
         popup = new Form {
-            Text = "Keyboard & Mouse Batteries", ClientSize = new Size(400,360),
+            Text = "AULA F75 Battery", ClientSize = new Size(400,210),
             FormBorderStyle = FormBorderStyle.FixedDialog, ShowInTaskbar = true,
             TopMost = true, StartPosition = FormStartPosition.Manual,
             BackColor = Color.FromArgb(25,29,36), ForeColor = Color.White
@@ -216,7 +207,7 @@ sealed class TrayApp : ApplicationContext
             popup.Controls.AddRange(new Control[] { title,device.LevelLabel,device.DetailLabel });
             device.UpdateLabels();
         }
-        var refresh = new Button { Text = "Refresh both", Left = 20, Top = 322, Width = 110, Height = 27, FlatStyle = FlatStyle.Flat };
+        var refresh = new Button { Text = "Refresh", Left = 20, Top = 172, Width = 110, Height = 27, FlatStyle = FlatStyle.Flat };
         refresh.Click += delegate { Refresh(); };
         popup.Controls.Add(refresh);
         var area = Screen.FromPoint(Cursor.Position).WorkingArea;
@@ -237,7 +228,7 @@ sealed class TrayApp : ApplicationContext
     {
         if (args.Length > 0 && args[0] == "--probe") {
             string result = "";
-            foreach (var query in new Func<AulaBatteryProbe.Reading>[] { QueryAula,QueryRazer }) {
+            foreach (var query in new Func<AulaBatteryProbe.Reading>[] { QueryAula }) {
                 try { var r = query(); result += (r.Percent.HasValue ? r.Percent + "%: " : "") + r.Message + Environment.NewLine; }
                 catch (Exception ex) { result += ex.Message + Environment.NewLine; }
             }

@@ -11,7 +11,6 @@ public static class AulaBatteryProbe
     {
         public int? Percent;
         public bool PluggedIn;
-        public bool? Charging;
         public string Message;
         public override string ToString() { return Message; }
     }

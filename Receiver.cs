@@ -25,11 +25,6 @@ static class Receiver
         return FindMatching("vid_3554&pid_fa09&mi_01&col01");
     }
 
-    public static string FindRazer()
-    {
-        return FindMatching("vid_1532&pid_00be&mi_00#") ?? FindMatching("vid_1532&pid_00bf&mi_00#");
-    }
-
     static string FindMatching(string identity)
     {
         Guid guid = new Guid("4d1e55b2-f16f-11cf-88cb-001111000030");
