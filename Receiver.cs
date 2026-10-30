@@ -7,6 +7,8 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
 using Microsoft.Win32;
+using System.Collections.Generic;
+using System.Linq;
 
 static class Receiver
 {
@@ -22,11 +24,13 @@ static class Receiver
 
     public static string Find()
     {
-        return FindMatching("vid_3554&pid_fa09&mi_01&col01");
+        var endpoint = KeyboardProfiles.Select(KeyboardProfiles.Get("f75"), Scan(), "");
+        return endpoint == null ? null : endpoint.Path;
     }
 
-    static string FindMatching(string identity)
+    public static List<HidEndpoint> Scan()
     {
+        var endpoints = new List<HidEndpoint>();
         Guid guid = new Guid("4d1e55b2-f16f-11cf-88cb-001111000030");
         IntPtr set = SetupDiGetClassDevs(ref guid, null, IntPtr.Zero, 18);
         if (set == new IntPtr(-1)) throw new Win32Exception(Marshal.GetLastWin32Error());
@@ -44,11 +48,12 @@ static class Receiver
                     Marshal.WriteInt32(detail, IntPtr.Size == 8 ? 8 : 6);
                     if (!SetupDiGetDeviceInterfaceDetail(set, ref data, detail, needed, out needed, IntPtr.Zero)) continue;
                     string path = Marshal.PtrToStringUni(IntPtr.Add(detail, 4));
-                    if (path.IndexOf(identity, StringComparison.OrdinalIgnoreCase) >= 0) return path;
+                    var endpoint = HidTransport.Inspect(path);
+                    if (endpoint != null) endpoints.Add(endpoint);
                 }
                 finally { Marshal.FreeHGlobal(detail); }
             }
-            return null;
+            return endpoints;
         }
         finally { SetupDiDestroyDeviceInfoList(set); }
     }

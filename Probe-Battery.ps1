@@ -1,5 +1,5 @@
 $ErrorActionPreference = 'Stop'
-Add-Type -Path (Join-Path $PSScriptRoot 'BatteryProbe.cs')
+Add-Type -Path @((Join-Path $PSScriptRoot 'BatteryProbe.cs'), (Join-Path $PSScriptRoot 'HidTransport.cs'), (Join-Path $PSScriptRoot 'KeyboardProfiles.cs'))
 $devices = @(Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -like 'HID\VID_3554&PID_FA09&MI_01&COL01\*' })
 if ($devices.Count -eq 0) { throw 'AULA 2.4 GHz receiver not found.' }
 foreach ($device in $devices) {

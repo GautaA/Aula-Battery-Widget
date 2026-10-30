@@ -24,6 +24,8 @@ static class PopupSmokeTest
     }
     [STAThread]
     static void Main() {
+        string temporarySettings = Path.Combine(Path.GetTempPath(),"aula-popup-test-" + Guid.NewGuid().ToString("N") + ".txt");
+        KeyboardSettings.FileName = temporarySettings;
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
         using (var app = new TrayApp())
@@ -41,11 +43,27 @@ static class PopupSmokeTest
                     AssertVisible(OpenDetails(app), "Reopen off-screen window");
                     form.Close();
                     AssertVisible(OpenDetails(app), "Reopen closed window");
-                    File.WriteAllText("popup-test-result.txt", "PASS: hidden launch, minimized, hidden, off-screen, closed window");
+                    foreach (var profile in KeyboardProfiles.All) {
+                        var devices = (BatteryDevice[])typeof(TrayApp).GetField("devices",BindingFlags.Instance|BindingFlags.NonPublic).GetValue(app);
+                        ToolStripMenuItem models = null;
+                        foreach (ToolStripItem item in devices[0].Tray.ContextMenuStrip.Items) if(item.Text=="Keyboard model") models=(ToolStripMenuItem)item;
+                        if(models==null || models.DropDownItems.Count!=KeyboardProfiles.All.Length) throw new Exception("Missing model options");
+                        foreach (ToolStripItem item in models.DropDownItems) if(item.Text==profile.ToString()) { item.PerformClick(); break; }
+                        if(KeyboardSettings.Load().Model!=profile.Id) throw new Exception("Selected profile did not persist");
+                        var selectedForm=OpenDetails(app);
+                        AssertVisible(selectedForm,"Switch to " + profile.Name);
+                        if(selectedForm.Text!=profile.Name+" Battery") throw new Exception("Window label did not follow profile");
+                        if(profile.Experimental) {
+                            bool marked=false;
+                            foreach(Control control in selectedForm.Controls) if(control.Text.Contains("Experimental profile")) marked=true;
+                            if(!marked) throw new Exception("Untested profile lacks experimental label");
+                        }
+                    }
+                    File.WriteAllText("popup-test-result.txt", "PASS: hidden launch, window restoration, all 11 model menu selections, persistence and experimental labels");
                 } catch (Exception ex) {
                     File.WriteAllText("popup-test-result.txt", "FAIL: " + ex.Message);
                     Environment.ExitCode = 1;
-                } finally { app.ExitThread(); }
+                } finally { app.ExitThread(); if(File.Exists(temporarySettings)) File.Delete(temporarySettings); }
             };
             timer.Start();
             Application.Run(app);
