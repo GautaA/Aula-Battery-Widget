@@ -2,6 +2,10 @@
 
 Run `AulaF75Battery.exe` for a single AULA F75 tray indicator. Hover to see its battery level, click for details, or right-click for refresh, optional startup with Windows, and exit.
 
+## Showcase
+
+![AULA F75 tray indicator and hover tooltip showing 90% battery](docs/images/aula-f75-tray.png)
+
 The icon shows a green percentage, red at 20% or below, a blue `+` when connected to power, or a grey `?` when unavailable. Remembered readings are labeled **last seen** with their timestamp in the details window. Windows may initially place the icon in its hidden-icons menu.
 
 The keyboard is read once a minute. Low-battery notifications reset after connecting to power or recovery above 25%. Closing the details window leaves the tracker running.
@@ -23,12 +27,5 @@ Windows .NET Framework compiler, no extra packages:
 ```
 
 Exit the running tray app before rebuilding the same executable. `Build.ps1 -OutputPath .\AulaF75Battery.next.exe` builds a replacement without stopping it. `--probe` writes `probe-result.txt`; `--show` opens the details window on launch.
-
-## Branches
-
-- `main`: AULA F75 only.
-- `feat/deathadder-v4-pro`: the saved version with both keyboard and DeathAdder V4 Pro indicators and combined hover tooltips.
-
-Executables are generated and ignored by Git. After switching branches, rebuild and restart the app to run that branch's version.
 
 [Battery protocol reference](https://github.com/ushineko/sanshoku/blob/main/specs/013-aula-f75.md)
