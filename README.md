@@ -23,9 +23,12 @@ Windows .NET Framework compiler, no extra packages:
 ```powershell
 .\Build.ps1
 .\Probe-Battery.ps1
+.\Test-Popup.ps1
 .\AulaF75Battery.exe --probe
 ```
 
 Exit the running tray app before rebuilding the same executable. `Build.ps1 -OutputPath .\AulaF75Battery.next.exe` builds a replacement without stopping it. `--probe` writes `probe-result.txt`; `--show` opens the details window on launch.
+
+`Test-Popup.ps1` checks that the details menu opens after a hidden launch and restores minimized, hidden, off-screen, or closed windows.
 
 [Battery protocol reference](https://github.com/ushineko/sanshoku/blob/main/specs/013-aula-f75.md)

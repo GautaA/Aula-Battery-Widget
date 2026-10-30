@@ -119,6 +119,7 @@ sealed class TrayApp : ApplicationContext
     readonly BatteryDevice[] devices;
     const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
     Form popup;
+    [DllImport("user32.dll")] static extern bool ShowWindow(IntPtr window, int command);
 
     static AulaBatteryProbe.Reading QueryAula() {
         string path = Receiver.Find();
@@ -191,7 +192,7 @@ sealed class TrayApp : ApplicationContext
 
     void ShowPopup()
     {
-        if (popup != null && !popup.IsDisposed) { popup.Activate(); return; }
+        if (popup != null && !popup.IsDisposed) { PresentPopup(); Refresh(); return; }
         popup = new Form {
             Text = "AULA F75 Battery", ClientSize = new Size(400,210),
             FormBorderStyle = FormBorderStyle.FixedDialog, ShowInTaskbar = true,
@@ -210,10 +211,21 @@ sealed class TrayApp : ApplicationContext
         var refresh = new Button { Text = "Refresh", Left = 20, Top = 172, Width = 110, Height = 27, FlatStyle = FlatStyle.Flat };
         refresh.Click += delegate { Refresh(); };
         popup.Controls.Add(refresh);
-        var area = Screen.FromPoint(Cursor.Position).WorkingArea;
-        popup.Location = new Point(area.Right-popup.Width-12,area.Bottom-popup.Height-12);
-        popup.Show();
+        PresentPopup();
         Refresh();
+    }
+
+    void PresentPopup()
+    {
+        popup.WindowState = FormWindowState.Normal;
+        var area = Screen.FromPoint(Cursor.Position).WorkingArea;
+        popup.Location = new Point(Math.Max(area.Left, area.Right-popup.Width-12), Math.Max(area.Top, area.Bottom-popup.Height-12));
+        popup.Show();
+        // A hidden process launch can override the first native ShowWindow call
+        // inside Form.Show(). A subsequent SW_RESTORE makes it visible reliably.
+        ShowWindow(popup.Handle, 9); // SW_RESTORE
+        popup.BringToFront();
+        popup.Activate();
     }
 
     protected override void ExitThreadCore() {
